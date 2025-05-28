@@ -34,6 +34,9 @@ def init_service():
         service = None
 
 def get_service():
+    global service
+    if service is None:
+        init_service()
     return service
 
 def update_sheet_with_retry(service, spreadsheet_id, range_to_write, body, max_attempts=3, valueInputOption='RAW'):
