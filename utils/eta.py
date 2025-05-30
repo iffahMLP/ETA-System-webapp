@@ -3,13 +3,16 @@ import re
 
 from services.sheets_service import get_service
 
-def load_sheet_data(spreadsheet_id, sheet_name):
+def load_sheet_data(spreadsheet_id: str, sheet_range: str):
+    """Generic loader for a sheet range like 'SheetName!A1:D'."""
     service = get_service()
+    if "!" not in sheet_range:
+        sheet_range += "!A1:Z"  # default full range
     result = service.spreadsheets().values().get(
         spreadsheetId=spreadsheet_id,
-        range=sheet_name
+        range=sheet_range
     ).execute()
-    return result.get("values", [])
+    return result.get('values', [])
 
 
 def extract_days(eta: str) -> int | None:

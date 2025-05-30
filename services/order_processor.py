@@ -12,10 +12,11 @@ logger = logging.getLogger(__name__)
 service = get_service()
 
 ARRIVAL_SHEET_ID = "1hElJ_sWXGy1-Psk9x2EPrXeZuFjKreR_B7cj3voxBIA"
-arrival_data = load_sheet_data(ARRIVAL_SHEET_ID, "General")
+arrival_data = load_sheet_data(ARRIVAL_SHEET_ID, "General!A1:G")
 eta_map = build_eta_lookup(arrival_data)
 
-webstocks_data = load_sheet_data(SPREADSHEET_ID, "webstocks")
+WEBSTOCKS_SHEET_ID = "102UjR-rv6X5k3p22x0wE6r-5BWe7e4-FNjx3SbB05Gg"
+webstocks_data = load_sheet_data(WEBSTOCKS_SHEET_ID, "webstocks!A2:A")
 stock_data = set(row[0] for row in webstocks_data if row)  # Flatten to set of SKUs/barcodes
 
 def group_skus_by_vendor(line_items):
