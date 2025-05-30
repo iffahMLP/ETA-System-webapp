@@ -34,9 +34,7 @@ def handle_webhook():
         order_number = data.get("order_number", "Unknown")
         action = request.args.get('action', '')
 
-        if data.get("backup_shipping_note"):
-            return add_backup_shipping_note(data)
-        elif action == 'addNewOrders':
+        if action == 'addNewOrders':
             queue.append(data)
             save_queue(queue)
             process_queue()

@@ -10,9 +10,6 @@ from config import SCOPES, GOOGLE_CREDENTIALS, IS_RENDER
 logger = logging.getLogger(__name__)
 service = None
 
-print("GOOGLE_CREDENTIALS set:", bool(GOOGLE_CREDENTIALS))
-print("GOOGLE_CREDENTIALS:", GOOGLE_CREDENTIALS)
-
 
 def init_service():
     global service
