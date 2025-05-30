@@ -36,7 +36,7 @@ def group_skus_by_vendor(line_items):
 def get_last_row():
     try:
         result = service.spreadsheets().values().get(
-            spreadsheetId=SPREADSHEET_ID, range=f'{SHEET_NAME}!A:N'
+            spreadsheetId=SPREADSHEET_ID, range=f'{SHEET_NAME}!A:A'
         ).execute()
         values = result.get('values', [])
         return len(values) + 1 if values else 2
@@ -50,7 +50,8 @@ def process_order(data):
         return False
     try:
         store = data.get("store")
-        SHEET_NAME = f"Orders {store}" if store else SHEET_NAME
+        SHEET_NAME = f"Orders {store}"
+        print(f"sheet: {SHEET_NAME}")
         order_number = data.get("order_number", "Unknown")
         logger.info(f"Processing order {order_number}")
         result = service.spreadsheets().values().get(
@@ -68,31 +69,17 @@ def process_order(data):
         is_dealer = data.get("is_dealer", False)
         order_created = format_date(data.get("order_created", ""))
         line_items = data.get("line_items", [])
-        # order_total = float(data.get("order_total", "0") or 0)
-
-        # tags = data.get("tags", [])
-        # if isinstance(tags, str):
-        #     tags_list = [tag.strip() for tag in tags.split(",")]
-        # else:
-        #     tags_list = tags
-        # has_vin_tag = any(tag in ["Call for VIN Alert Sent", "VIN Request Email Sent"] for tag in tags_list)
-        # status = "TBC (No)" if order_total > 500 and has_vin_tag else ""
 
         if not line_items:
             logger.warning(f"Order {order_number} has no line items")
             return True
 
-        # sku_by_vendor, has_vin_by_vendor = group_skus_by_vendor(line_items)
-        # rows_data = [
-        #     [order_created, order_number, order_id, ', '.join(skus), vendor, order_country, "", "", "", status, "", "Please Check VIN" if has_vin_by_vendor[vendor] else "", "", ""]
-        #     for vendor, skus in sku_by_vendor.items()
-        # ]
         rows_data = []
         for item in line_items:
             title, quantity, sku, vendor, barcode = item['title'], item['quantity'], item['sku'], item['vendor'], item['barcode']
             eta = get_eta(sku, vendor, store, barcode, order_created, eta_map, stock_data)
 
-            rows_data = [order_number, title, quantity, sku, vendor, eta, customer_email]
+            rows_data.append([order_number, title, quantity, sku, vendor, eta, customer_email])
 
         start_row = max(2, get_last_row())
         range_to_write = f'{SHEET_NAME}!A{start_row}'
