@@ -33,7 +33,7 @@ def group_skus_by_vendor(line_items):
                 has_vin_by_vendor[vendor] = True
     return sku_by_vendor, has_vin_by_vendor
 
-def get_last_row():
+def get_last_row(SPREADSHEET_ID, SHEET_NAME):
     try:
         result = service.spreadsheets().values().get(
             spreadsheetId=SPREADSHEET_ID, range=f'{SHEET_NAME}!A:A'
@@ -51,7 +51,6 @@ def process_order(data):
     try:
         store = data.get("store")
         SHEET_NAME = f"Orders {store}"
-        print(f"Open Sheet: {SHEET_NAME}")
         order_number = data.get("order_number", "Unknown")
         logger.info(f"Processing order {order_number}")
         result = service.spreadsheets().values().get(
@@ -81,7 +80,7 @@ def process_order(data):
 
             rows_data.append([order_number, title, quantity, sku, vendor, eta, customer_email])
 
-        start_row = max(2, get_last_row())
+        start_row = max(2, get_last_row(SPREADSHEET_ID, SHEET_NAME))
         range_to_write = f'{SHEET_NAME}!A{start_row}'
         body = {'values': rows_data}
         update_sheet_with_retry(service, SPREADSHEET_ID, range_to_write, body)
