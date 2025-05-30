@@ -51,7 +51,7 @@ def process_order(data):
     try:
         store = data.get("store")
         SHEET_NAME = f"Orders {store}"
-        print(f"sheet: {SHEET_NAME}")
+        print(f"Open Sheet: {SHEET_NAME}")
         order_number = data.get("order_number", "Unknown")
         logger.info(f"Processing order {order_number}")
         result = service.spreadsheets().values().get(
@@ -136,7 +136,7 @@ def add_backup_shipping_note(data):
         body = {'values': rows_data}
         update_sheet_with_retry(service, SPREADSHEET_ID, range_to_write, body)
 
-        apply_formulas()
+        # apply_formulas()
         delete_rows()
         delete_duplicate_rows()
 
