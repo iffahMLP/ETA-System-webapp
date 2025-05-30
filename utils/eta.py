@@ -48,7 +48,7 @@ def build_eta_lookup(arrival_data):
         eta_map[sku_or_vendor] = eta_map.get(sku_or_vendor) or badge
     return eta_map
 
-def get_eta(sku, vendor, store, barcode, order_created, eta_map, stock_data):
+def get_eta(sku, vendor, store, barcode, inventory, order_created, eta_map, stock_data):
     store_key = store.lower().strip()
     check_stock = "3 - 4 Days" if sku in stock_data or barcode in stock_data else None
 
@@ -58,6 +58,9 @@ def get_eta(sku, vendor, store, barcode, order_created, eta_map, stock_data):
         f"{vendor}|{store_key}",
         vendor
     ]
+
+    if inventory >= 0:
+        return "Ready"
 
     eta = check_stock
     for key in lookup_keys:

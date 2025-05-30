@@ -76,7 +76,8 @@ def process_order(data):
         rows_data = []
         for item in line_items:
             title, quantity, sku, vendor, barcode = item['title'], item['quantity'], item['sku'], item['vendor'], item['barcode']
-            eta = get_eta(sku, vendor, store, barcode, order_created, eta_map, stock_data)
+            inventory = item['inventory']
+            eta = get_eta(sku, vendor, store, barcode, inventory, order_created, eta_map, stock_data)
 
             rows_data.append([order_number, title, quantity, sku, vendor, eta, customer_email])
 
