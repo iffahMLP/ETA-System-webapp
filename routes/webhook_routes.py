@@ -4,7 +4,7 @@ import logging
 import json
 from config import SECRET_KEY
 from services.queue_handler import load_queue, save_queue, process_queue
-from services.order_processor import add_backup_shipping_note, remove_fulfilled_sku
+from services.order_processor import remove_fulfilled_sku
 from utils.helpers import clean_json
 
 webhook_bp = Blueprint('webhook_routes', __name__)
