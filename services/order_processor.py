@@ -53,7 +53,6 @@ def process_order(data):
         return False
     try:
         store = data.get("store")
-
         SHEET_NAME = f"Orders {store}"
         order_number = data.get("order_number", "Unknown")
         logger.info(f"Processing order {order_number}")
@@ -85,7 +84,7 @@ def process_order(data):
             eta = get_eta(sku, vendor, store, barcode, inventory, order_created, eta_map, stock_data)
             
             item["Latest ETA On Hand"] = eta
-            
+
             if "mlperformance.co.uk" in url:
                 order_country = "GB"
             elif "mlpautoteile.de" in url and customer_lang == "en-DE":
@@ -155,6 +154,8 @@ def process_order(data):
 
 def remove_fulfilled_sku(data):
     try:
+        store = data.get("store")
+        SHEET_NAME = f"Orders {store}"
         order_number = data.get("order_number", "Unknown").lstrip("#")
         line_items = data.get("line_items", [])
         logger.info(f"Processing remove_fulfilled_sku for order {order_number}, line_items: {line_items}")
@@ -166,23 +167,17 @@ def remove_fulfilled_sku(data):
         logger.info(f"Retrieved {len(values)} rows from sheet")
 
         rows_to_delete = []
-        rows_to_update = []
 
         for i, row in enumerate(values):
-            if len(row) > 1 and row[1].lstrip("#") == order_number:
-                skus = row[3].split(', ') if len(row) > 3 and row[3] else []
+            if len(row) > 1 and row[1] == order_number:
+                row_sku = str(row[3])
                 if not line_items:
                     rows_to_delete.append(i)
                     continue
                 for item in line_items:
-                    sku = item.get('sku')
-                    if sku in skus:
-                        skus.remove(sku)
-                if not skus:
-                    rows_to_delete.append(i)
-                else:
-                    row[3] = ', '.join(skus)
-                    rows_to_update.append((i, row))
+                    sku = str(item.get('sku'))
+                    if sku == row_sku:
+                        rows_to_delete.append(i)
 
         if rows_to_delete:
             rows_to_delete.sort(reverse=True)
@@ -202,14 +197,6 @@ def remove_fulfilled_sku(data):
             ).execute()
             logger.info(f"Deleted rows: {rows_to_delete}")
 
-        for i, row in rows_to_update:
-            service.spreadsheets().values().update(
-                spreadsheetId=SPREADSHEET_ID,
-                range=f'{SHEET_NAME}!A{i+1}:N{i+1}',
-                valueInputOption='RAW',
-                body={'values': [row]}
-            ).execute()
-            logger.info(f"Updated row {i+1} with SKUs: {row[3]}")
 
         return jsonify({"status": "success", "message": "Fulfilled SKUs removed or rows deleted"}), 200
     except Exception as e:
