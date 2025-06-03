@@ -51,8 +51,8 @@ def first_draft(order, first_name, db, store, order_country):
     table_content = ''
     for item in order['Line Items']:
         table_content += f"""<tr><td style='border: 1px solid black;padding-left:5px;padding-right:5px;'>{order['Order Number']}</td>
-                    <td style='border: 1px solid black;padding-left:5px;padding-right:5px;'>{item['Product']}</td>
-                    <td style='border: 1px solid black;padding-left:5px;padding-right:5px;'>{item['Quantity']}</td>
+                    <td style='border: 1px solid black;padding-left:5px;padding-right:5px;'>{item['title']}</td>
+                    <td style='border: 1px solid black;padding-left:5px;padding-right:5px;'>{item['quantity']}</td>
                     <td style='border: 1px solid black;padding-left:5px;padding-right:5px;'>{item['Latest ETA On Hand']}</td></tr>"""
         
 
@@ -74,7 +74,7 @@ def send_email(recipient, draft, db):
         sender = 'iffah@mlperformance.co.uk'
         password = "owee xytq urot uthi" #IffahMLP!
         recipient = 'iffah@mlperformance.co.uk'
-        
+
         s.login(sender, password)
 
         msg = MIMEMultipart()
