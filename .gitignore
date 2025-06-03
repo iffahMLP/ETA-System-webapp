@@ -8,3 +8,5 @@ venv/
 *.log
 credentials.json
 .env
+notes.txt
+test.ipynb
