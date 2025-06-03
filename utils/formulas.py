@@ -48,7 +48,7 @@ def delete_rows():
             spreadsheetId=SPREADSHEET_ID, range=f'{SHEET_NAME}!A:N'
         ).execute()
         values = result.get('values', [])
-        rows_to_delete = [i for i, row in enumerate(values) if len(row) > 3 and row[3] in ['Tip', 'MLP-AIR-FRESHENER', '']]
+        rows_to_delete = [i for i, row in enumerate(values) if len(row) > 3 and row[3] in ['Tip', '']]
 
         if not rows_to_delete:
             return

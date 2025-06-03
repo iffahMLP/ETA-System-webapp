@@ -2,11 +2,14 @@
 import logging
 import json
 from flask import jsonify
+from datetime import datetime
 from config import SPREADSHEET_ID, SHEET_NAME
 from utils.helpers import format_date
 from services.sheets_service import get_service, update_sheet_with_retry
 from utils.formulas import apply_formulas, delete_rows, delete_duplicate_rows
 from utils.eta import get_eta, build_eta_lookup, load_sheet_data
+from utils.config_loader import get_configs
+from utils.email_utils import first_draft, send_email
 
 logger = logging.getLogger(__name__)
 service = get_service()
@@ -50,6 +53,7 @@ def process_order(data):
         return False
     try:
         store = data.get("store")
+
         SHEET_NAME = f"Orders {store}"
         order_number = data.get("order_number", "Unknown")
         logger.info(f"Processing order {order_number}")
@@ -63,6 +67,7 @@ def process_order(data):
 
         order_id = data.get("order_id", "").replace("gid://shopify/Order/", "https://admin.shopify.com/store/mlperformance/orders/")
         order_country = data.get("order_country", "Unknown")
+        customer_lang = data.get("customer_language", "en-GB")
         customer_email = data.get("customer_email", "Unknown")
         customer_name = data.get("customer_name", "Unknown")
         is_dealer = data.get("is_dealer", False)
@@ -76,8 +81,17 @@ def process_order(data):
         rows_data = []
         for item in line_items:
             title, quantity, sku, vendor, barcode = item['title'], item['quantity'], item['sku'], item['vendor'], item['barcode']
-            inventory = item['inventory']
+            inventory, url = item['inventory'], item['url']
             eta = get_eta(sku, vendor, store, barcode, inventory, order_created, eta_map, stock_data)
+
+            if "mlperformance.co.uk" in url:
+                order_country = "GB"
+            elif "mlpautoteile.de" in url and customer_lang == "en-DE":
+                order_country = "DE"
+            elif store == "US":
+                order_country = "GB"
+            elif "mlpautoteile.de" in url and customer_lang != "en-DE":
+                order_country = "GB"
 
             rows_data.append([order_number, title, quantity, sku, vendor, eta, customer_email])
 
@@ -86,64 +100,56 @@ def process_order(data):
         body = {'values': rows_data}
         update_sheet_with_retry(service, SPREADSHEET_ID, range_to_write, body)
 
-        # apply_formulas()
         delete_rows()
         delete_duplicate_rows()
+
+        # Check if rows still exist after deletion
+        result_check = service.spreadsheets().values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range=f'{SHEET_NAME}!A:A'
+        ).execute()
+        current_order_numbers = [row[0] for row in result_check.get('values', []) if row]
+
+        if order_number in current_order_numbers:
+            # Send email
+            if not is_dealer and customer_email and customer_email not in ['sales@mlperformanceusa.com', 'hello@masata.co.uk']:
+                store_configs, _ = get_configs()
+                store_db = store_configs.get(store, store_configs["UK"])  # fallback to UK
+
+                order_info = {
+                    "Order Number": order_number,
+                    "Line Items": line_items
+                }
+
+                draft = first_draft(order_info, customer_name, store_db, store, order_country)
+                send_email(customer_email, draft, store_db)
+
+                # Update columns I and K
+                for item in line_items:
+                    row_index = start_row + item["Index"]
+                    service.spreadsheets().values().update(
+                        spreadsheetId=SPREADSHEET_ID,
+                        range=f'{SHEET_NAME}!I{row_index}',
+                        valueInputOption='RAW',
+                        body={'values': [[str(item["Latest ETA On Hand"])]]}
+                    ).execute()
+                    service.spreadsheets().values().update(
+                        spreadsheetId=SPREADSHEET_ID,
+                        range=f'{SHEET_NAME}!K{row_index}',
+                        valueInputOption='RAW',
+                        body={'values': [[f"Sent On {datetime.today().strftime('%d-%m-%Y')}"]]}
+                    ).execute()
+                logger.info(f"Email sent to {customer_email} and spreadsheet updated for {order_number}")
+            else:
+                logger.info(f"No email sent for dealer or skipped emails for {order_number}")
+        else:
+            logger.info(f"Order {order_number} was removed as duplicate or invalid. Skipping email.")
 
         return True
     except Exception as e:
         logger.error(f"Error processing order {order_number}: {str(e)}")
         return False
 
-
-def add_backup_shipping_note(data):
-    try:
-        order_number = data.get("order_number")
-        result = service.spreadsheets().values().get(
-            spreadsheetId=SPREADSHEET_ID, range=f'{SHEET_NAME}!B:B'
-        ).execute()
-        order_numbers = [row[0] for row in result.get('values', []) if row and row[0]]
-
-        if str(order_number) in order_numbers:
-            logger.warning(f"Duplicate order number {order_number} found in column B, skipping processing")
-            return jsonify({"status": "skipped", "message": f"Order {order_number} is a duplicate"}), 200
-
-        order_id = data.get("order_id").replace("gid://shopify/Order/", "https://admin.shopify.com/store/mlperformance/orders/")
-        order_country = data.get("order_country")
-        backup_note = data.get("backup_shipping_note")
-        order_created = format_date(data.get("order_created"))
-        line_items = data.get("line_items", [])
-        order_total = float(data.get("order_total", "0") or 0)
-
-        tags = data.get("tags", [])
-        if isinstance(tags, str):
-            tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
-        elif isinstance(tags, list):
-            tags_list = [tag.strip() for tag in tags if isinstance(tag, str)]
-        else:
-            tags_list = []
-        has_vin_tag = any(tag in ["Call for VIN Alert Sent", "VIN Request Email Sent"] for tag in tags_list)
-        status = "TBC (No)" if order_total > 500 and has_vin_tag else ""
-
-        sku_by_vendor, has_vin_by_vendor = group_skus_by_vendor(line_items)
-        rows_data = [
-            [order_created, order_number, order_id, ', '.join(skus), vendor, order_country, "", "", "", status, "", "Please Check VIN" if has_vin_by_vendor[vendor] else "", backup_note, ""]
-            for vendor, skus in sku_by_vendor.items()
-        ]
-
-        start_row = max(2, get_last_row())
-        range_to_write = f'{SHEET_NAME}!A{start_row}:N{start_row + len(rows_data) - 1}'
-        body = {'values': rows_data}
-        update_sheet_with_retry(service, SPREADSHEET_ID, range_to_write, body)
-
-        # apply_formulas()
-        delete_rows()
-        delete_duplicate_rows()
-
-        return jsonify({"status": "success", "message": "Data with backup shipping note added successfully"}), 200
-    except Exception as e:
-        logger.error(f"Error in add_backup_shipping_note for order {order_number}: {str(e)}")
-        return jsonify({"status": "error", "message": f"Processing failed: {str(e)}"}), 500
 
 def remove_fulfilled_sku(data):
     try:
