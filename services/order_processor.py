@@ -83,7 +83,9 @@ def process_order(data):
             title, quantity, sku, vendor, barcode = item['title'], item['quantity'], item['sku'], item['vendor'], item['barcode']
             inventory, url = item['inventory'], item['url']
             eta = get_eta(sku, vendor, store, barcode, inventory, order_created, eta_map, stock_data)
-
+            
+            item["Latest ETA On Hand"] = eta
+            
             if "mlperformance.co.uk" in url:
                 order_country = "GB"
             elif "mlpautoteile.de" in url and customer_lang == "en-DE":
@@ -121,25 +123,25 @@ def process_order(data):
                     "Line Items": line_items
                 }
 
-                # draft = first_draft(order_info, customer_name, store_db, store, order_country)
-                # send_email(customer_email, draft, store_db)
+                draft = first_draft(order_info, customer_name, store_db, store, order_country)
+                send_email(customer_email, draft, store_db)
 
                 # Update columns I and K
-                # for item in line_items:
-                #     row_index = start_row + item["Index"]
-                #     service.spreadsheets().values().update(
-                #         spreadsheetId=SPREADSHEET_ID,
-                #         range=f'{SHEET_NAME}!I{row_index}',
-                #         valueInputOption='RAW',
-                #         body={'values': [[str(item["Latest ETA On Hand"])]]}
-                #     ).execute()
-                #     service.spreadsheets().values().update(
-                #         spreadsheetId=SPREADSHEET_ID,
-                #         range=f'{SHEET_NAME}!K{row_index}',
-                #         valueInputOption='RAW',
-                #         body={'values': [[f"Sent On {datetime.today().strftime('%d-%m-%Y')}"]]}
-                #     ).execute()
-                # logger.info(f"Email sent to {customer_email} and spreadsheet updated for {order_number}")
+                for item in line_items:
+                    row_index = start_row + item["Index"]
+                    service.spreadsheets().values().update(
+                        spreadsheetId=SPREADSHEET_ID,
+                        range=f'{SHEET_NAME}!I{row_index}',
+                        valueInputOption='RAW',
+                        body={'values': [[str(item["Latest ETA On Hand"])]]}
+                    ).execute()
+                    service.spreadsheets().values().update(
+                        spreadsheetId=SPREADSHEET_ID,
+                        range=f'{SHEET_NAME}!K{row_index}',
+                        valueInputOption='RAW',
+                        body={'values': [[f"Sent On {datetime.today().strftime('%d-%m-%Y')}"]]}
+                    ).execute()
+                logger.info(f"Email sent to {customer_email} and spreadsheet updated for {order_number}")
             else:
                 logger.info(f"No email sent for dealer or skipped emails for {order_number}")
         else:
