@@ -162,6 +162,7 @@ def remove_fulfilled_sku(data):
         SHEET_NAME = f"Orders {store}"
         order_number = data.get("order_number", "Unknown").lstrip("#")
         line_items = data.get("line_items", [])
+        print(f"Processing remove_fulfilled_sku for order {order_number}, line_items: {line_items}")
         logger.info(f"Processing remove_fulfilled_sku for order {order_number}, line_items: {line_items}")
 
         result = service.spreadsheets().values().get(
