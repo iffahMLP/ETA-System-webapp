@@ -62,6 +62,6 @@ def process_queue(queue_file, processor_func):
             updated_queue.append(order)
         time.sleep(1)
 
-    save_queue(updated_queue)
+    save_queue(updated_queue, queue_file)
     logger.info(f"Queue processing complete. New queue size: {len(updated_queue)}")
     time.sleep(2)
