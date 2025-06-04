@@ -6,9 +6,10 @@ from datetime import datetime
 from config import SPREADSHEET_ID, get_store_configs
 from utils.helpers import format_date
 from services.sheets_service import get_service, update_sheet_with_retry
-from utils.formulas import apply_formulas, delete_rows, delete_duplicate_rows
+from utils.formulas import delete_rows, delete_duplicate_rows
 from utils.eta import get_eta, build_eta_lookup, load_sheet_data
 from utils.email_utils import first_draft, send_email
+from utils.shopify_graphql import update_note
 
 logger = logging.getLogger(__name__)
 service = get_service()
@@ -70,7 +71,7 @@ def process_order(data):
             logger.warning(f"Duplicate order {order_number}")
             return True
 
-        order_id = data.get("order_id", "").replace("gid://shopify/Order/", "https://admin.shopify.com/store/mlperformance/orders/")
+        order_id = data.get("order_id", "")
         order_country = data.get("order_country", "Unknown")
         customer_lang = data.get("customer_lang", "en-GB")
         customer_email = data.get("customer_email", "Unknown")
@@ -126,6 +127,7 @@ def process_order(data):
 
                 order_info = {
                     "Order Number": order_number,
+                    "Order ID": order_id,
                     "Line Items": line_items
                 }
 
@@ -147,6 +149,12 @@ def process_order(data):
                         valueInputOption='RAW',
                         body={'values': [[f"Sent On {datetime.today().strftime('%d-%m-%Y')}"]]}
                     ).execute()
+
+                if store == "US":
+                    update_note(order_info, store_configs["UK"])
+                    order_info['Order ID'] = 'gid://shopify/Order/' + str(data.get("order_id_us", ""))
+                update_note(order_info, store_db)
+
                 logger.info(f"Email sent to {customer_email} and spreadsheet updated for {order_number}")
             else:
                 logger.info(f"No email sent for dealer or skipped emails for {order_number}")
@@ -165,7 +173,6 @@ def remove_fulfilled_sku(data):
         SHEET_NAME = f"Orders {store}"
         order_number = data.get("order_number", "Unknown")
         line_items = data.get("line_items", [])
-        print(f"Processing remove_fulfilled_sku for order {order_number}, line_items: {line_items}")
         logger.info(f"Processing remove_fulfilled_sku for order {order_number}, line_items: {line_items}")
 
         result = service.spreadsheets().values().get(
@@ -177,7 +184,6 @@ def remove_fulfilled_sku(data):
         rows_to_delete = []
 
         for i, row in enumerate(values):
-            print(f"Processing row {i}: {row}")
             if len(row) > 1 and row[0] == order_number:
                 row_sku = str(row[3])
                 if not line_items:
