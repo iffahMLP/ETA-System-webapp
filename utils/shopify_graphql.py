@@ -46,7 +46,10 @@ def update_note(order, config):
         return
 
     # Step 2: Combine old + new note
-    combined_note = existing_note + "\n\n" + new_note
+    if not existing_note:
+        combined_note = new_note
+    else:
+      combined_note = existing_note + "\n\n" + new_note
 
     # Step 3: Run the mutation to update the note
     mutation = """
@@ -83,3 +86,4 @@ def update_note(order, config):
         logger.warning(f"User errors: {result_update['data']['orderUpdate']['userErrors']}")
     else:
         logger.info(f"Note updated for order {order_data['name']}")
+    print(f"Note updated for order {order_data['name']}")
