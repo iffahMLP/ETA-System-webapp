@@ -3,30 +3,30 @@ import json
 import os
 import logging
 import time
-from config import QUEUE_FILE, FAILED_ORDERS_FILE
+from config import FAILED_ORDERS_FILE
 from services.order_processor import process_order
 
 logger = logging.getLogger(__name__)
 
-def load_queue():
+def load_queue(queue_file):
     try:
-        if os.path.exists(QUEUE_FILE):
-            with open(QUEUE_FILE, 'r') as f:
+        if os.path.exists(queue_file):
+            with open(queue_file, 'r') as f:
                 return json.load(f)
         return []
     except Exception as e:
         logger.error(f"Error loading queue: {str(e)}")
         return []
 
-def save_queue(queue):
+def save_queue(queue, queue_file):
     try:
-        with open(QUEUE_FILE, 'w') as f:
+        with open(queue_file, 'w') as f:
             json.dump(queue, f)
     except Exception as e:
         logger.error(f"Error saving queue: {str(e)}")
 
-def process_queue():
-    queue = load_queue()
+def process_queue(queue_file, processor_func):
+    queue = load_queue(queue_file)
     if not queue:
         logger.info("Queue is empty, nothing to process")
         return
@@ -55,7 +55,7 @@ def process_queue():
 
         order["retries"] = retries + 1
         logger.info(f"Attempting to process valid order {order_number}, retry {retries + 1}/{max_retries}")
-        if process_order(order):
+        if processor_func(order):
             logger.info(f"Order {order_number} processed successfully, removing from queue")
         else:
             logger.warning(f"Order {order_number} failed processing, keeping in queue")

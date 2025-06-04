@@ -13,6 +13,7 @@ GOOGLE_CREDENTIALS = os.getenv('GOOGLE_CREDENTIALS')
 IS_RENDER = os.getenv('RENDER') == 'true'
 
 QUEUE_FILE = '/tmp/order_queue.json' if IS_RENDER else 'order_queue.json'
+FULFILLED_QUEUE_FILE = '/tmp/order_queue.json' if IS_RENDER else 'order_queue.json'
 FAILED_ORDERS_FILE = '/tmp/failed_orders.json' if IS_RENDER else 'failed_orders.json'
 
 def get_store_configs():

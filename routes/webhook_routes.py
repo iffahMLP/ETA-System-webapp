@@ -3,8 +3,9 @@ from flask import Blueprint, request, jsonify
 import logging
 import json
 from config import SECRET_KEY
+from config import QUEUE_FILE, FULFILLED_QUEUE_FILE
 from services.queue_handler import load_queue, save_queue, process_queue
-from services.order_processor import remove_fulfilled_sku
+from services.order_processor import process_order, remove_fulfilled_sku
 from utils.helpers import clean_json
 
 webhook_bp = Blueprint('webhook_routes', __name__)
@@ -19,7 +20,8 @@ def handle_webhook():
     logger.info(f"Raw request data: {request.data.decode('utf-8')}")
     logger.info(f"Request headers: {request.headers}")
 
-    queue = load_queue()
+    queue = load_queue(QUEUE_FILE)
+    fulfilled_queue = load_queue(FULFILLED_QUEUE_FILE)
     order_number = "Unknown"
     raw_data = request.data
     cleaned_data = clean_json(raw_data)
@@ -28,7 +30,7 @@ def handle_webhook():
         data = json.loads(cleaned_data)
         if not data:
             queue.append({"error": "No valid JSON data after cleaning", "order_number": order_number, "raw_data": raw_data.decode('utf-8')})
-            save_queue(queue)
+            save_queue(queue, QUEUE_FILE)
             return jsonify({"status": "queued", "message": "Order queued with error: No valid JSON data"}), 200
 
         order_number = data.get("order_number", "Unknown")
@@ -36,11 +38,14 @@ def handle_webhook():
 
         if action == 'addNewOrders':
             queue.append(data)
-            save_queue(queue)
-            process_queue()
+            save_queue(queue, QUEUE_FILE)
+            process_queue(QUEUE_FILE, process_order)
             return jsonify({"status": "queued", "message": f"Order {order_number} added to queue"}), 200
         elif action == 'removeFulfilledSKU':
-            return remove_fulfilled_sku(data)
+            fulfilled_queue.append(data)
+            save_queue(queue, FULFILLED_QUEUE_FILE)
+            process_queue(FULFILLED_QUEUE_FILE, remove_fulfilled_sku)
+            return jsonify({"status": "queued", "message": f"Order {order_number} added to queue"}), 200
         else:
             queue.append({"error": f"Invalid action: {action}", "order_number": order_number, "raw_data": raw_data.decode('utf-8')})
             save_queue(queue)

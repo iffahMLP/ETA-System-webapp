@@ -22,6 +22,19 @@ def view_queue():
         logger.error(f"Error viewing queue: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@view_bp.route('/queue_fulfilled', methods=['GET'])
+def view_queue_fulfilled():
+    provided_key = request.args.get('key')
+    if provided_key != SECRET_KEY:
+        return jsonify({"error": "Access Denied"}), 403
+    try:
+        queue = load_queue()
+        logger.info(f"Queue accessed. Size: {len(queue)}")
+        return jsonify({"queue_size": len(queue), "orders": queue}), 200
+    except Exception as e:
+        logger.error(f"Error viewing queue: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    
 @view_bp.route('/failed_orders', methods=['GET'])
 def view_failed_orders():
     provided_key = request.args.get('key')

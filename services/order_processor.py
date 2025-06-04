@@ -65,7 +65,7 @@ def process_order(data):
 
         order_id = data.get("order_id", "").replace("gid://shopify/Order/", "https://admin.shopify.com/store/mlperformance/orders/")
         order_country = data.get("order_country", "Unknown")
-        customer_lang = data.get("customer_language", "en-GB")
+        customer_lang = data.get("customer_lang", "en-GB")
         customer_email = data.get("customer_email", "Unknown")
         customer_name = data.get("customer_name", "Unknown")
         is_dealer = data.get("is_dealer", False)
