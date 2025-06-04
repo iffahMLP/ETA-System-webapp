@@ -77,12 +77,13 @@ def process_order(data):
             return True
 
         rows_data = []
-        for item in line_items:
+        for idx, item in enumerate(line_items):
             title, quantity, sku, vendor, barcode = item['title'], item['quantity'], item['sku'], item['vendor'], item['barcode']
             inventory, url = item['inventory'], item['url']
             eta = get_eta(sku, vendor, store, barcode, inventory, order_created, eta_map, stock_data)
             
             item["Latest ETA On Hand"] = eta
+            item["Index"] = idx  # Store index for later updates
 
             if "mlperformance.co.uk" in url:
                 order_country = "GB"
