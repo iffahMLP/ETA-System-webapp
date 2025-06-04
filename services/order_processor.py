@@ -129,13 +129,13 @@ def process_order(data):
                     row_index = start_row + item["Index"]
                     service.spreadsheets().values().update(
                         spreadsheetId=SPREADSHEET_ID,
-                        range=f'{SHEET_NAME}!I{row_index}',
+                        range=f'{SHEET_NAME}!H{row_index}',
                         valueInputOption='RAW',
                         body={'values': [[str(item["Latest ETA On Hand"])]]}
                     ).execute()
                     service.spreadsheets().values().update(
                         spreadsheetId=SPREADSHEET_ID,
-                        range=f'{SHEET_NAME}!K{row_index}',
+                        range=f'{SHEET_NAME}!J{row_index}',
                         valueInputOption='RAW',
                         body={'values': [[f"Sent On {datetime.today().strftime('%d-%m-%Y')}"]]}
                     ).execute()
