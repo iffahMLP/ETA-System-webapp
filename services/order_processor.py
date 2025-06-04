@@ -113,7 +113,7 @@ def process_order(data):
         if order_number in current_order_numbers:
             # Send email
             if not is_dealer and customer_email and customer_email not in ['sales@mlperformanceusa.com', 'hello@masata.co.uk']:
-                store_configs, _ = get_configs()
+                store_configs, _ = get_store_configs()
                 store_db = store_configs.get(store, store_configs["UK"])  # fallback to UK
 
                 order_info = {
