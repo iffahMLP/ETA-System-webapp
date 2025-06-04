@@ -3,12 +3,11 @@ import logging
 import json
 from flask import jsonify
 from datetime import datetime
-from config import SPREADSHEET_ID, SHEET_NAME
+from config import SPREADSHEET_ID, get_store_configs
 from utils.helpers import format_date
 from services.sheets_service import get_service, update_sheet_with_retry
 from utils.formulas import apply_formulas, delete_rows, delete_duplicate_rows
 from utils.eta import get_eta, build_eta_lookup, load_sheet_data
-from utils.config_loader import get_configs
 from utils.email_utils import first_draft, send_email
 
 logger = logging.getLogger(__name__)

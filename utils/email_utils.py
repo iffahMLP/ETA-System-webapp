@@ -56,7 +56,7 @@ def first_draft(order, first_name, db, store, order_country):
                     <td style='border: 1px solid black;padding-left:5px;padding-right:5px;'>{item['Latest ETA On Hand']}</td></tr>"""
         
 
-    signature = f"""<br> Angela Amado | {db['company']}<br>T: {db['phone']}<br> E: {db['sender']}<br> W: {db['website']}"""
+    signature = f"""<br> Angela Amado | {db['COMPANY']}<br>T: {db['PHONE']}<br> E: {db['SENDER_EMAIL']}<br> W: {db['WEBSITE']}<br>"""
 
     draft['html'] = ftfy.fix_text(intro + content + table_content + end + signature)
     return draft
