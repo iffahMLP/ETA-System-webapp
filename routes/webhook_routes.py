@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify
 import logging
 import json
@@ -29,7 +28,11 @@ def handle_webhook():
     try:
         data = json.loads(cleaned_data)
         if not data:
-            queue.append({"error": "No valid JSON data after cleaning", "order_number": order_number, "raw_data": raw_data.decode('utf-8')})
+            queue.append({
+                "error": "No valid JSON data after cleaning",
+                "order_number": order_number,
+                "raw_data": raw_data.decode('utf-8')
+            })
             save_queue(queue, QUEUE_FILE)
             return jsonify({"status": "queued", "message": "Order queued with error: No valid JSON data"}), 200
 
@@ -47,17 +50,43 @@ def handle_webhook():
             process_queue(FULFILLED_QUEUE_FILE, remove_fulfilled_sku)
             return jsonify({"status": "queued", "message": f"Order {order_number} added to queue"}), 200
         else:
-            queue.append({"error": f"Invalid action: {action}", "order_number": order_number, "raw_data": raw_data.decode('utf-8')})
-            save_queue(queue)
+            error_data = {
+                "error": f"Invalid action: {action}",
+                "order_number": order_number,
+                "raw_data": raw_data.decode('utf-8')
+            }
+            queue.append(error_data)
+            save_queue(queue, QUEUE_FILE)
             return jsonify({"status": "queued", "message": f"Order {order_number} queued with error: Invalid action"}), 200
 
     except ValueError as e:
         logger.error(f"Failed to parse JSON: {str(e)}")
-        queue.append({"error": f"Invalid JSON: {str(e)}", "order_number": order_number, "raw_data": raw_data.decode('utf-8')})
-        save_queue(queue)
+        error_data = {
+            "error": f"Invalid JSON: {str(e)}",
+            "order_number": order_number,
+            "raw_data": raw_data.decode('utf-8')
+        }
+        # Decide queue based on action
+        if request.args.get('action', '') == 'removeFulfilledSKU':
+            fulfilled_queue.append(error_data)
+            save_queue(fulfilled_queue, FULFILLED_QUEUE_FILE)
+        else:
+            queue.append(error_data)
+            save_queue(queue, QUEUE_FILE)
         return jsonify({"status": "queued", "message": f"Order {order_number} queued with error: Invalid JSON"}), 200
+
     except Exception as e:
         logger.error(f"Error processing webhook: {str(e)}")
-        queue.append({"error": str(e), "order_number": order_number, "raw_data": raw_data.decode('utf-8')})
-        save_queue(queue)
+        error_data = {
+            "error": str(e),
+            "order_number": order_number,
+            "raw_data": raw_data.decode('utf-8')
+        }
+        # Decide queue based on action
+        if request.args.get('action', '') == 'removeFulfilledSKU':
+            fulfilled_queue.append(error_data)
+            save_queue(fulfilled_queue, FULFILLED_QUEUE_FILE)
+        else:
+            queue.append(error_data)
+            save_queue(queue, QUEUE_FILE)
         return jsonify({"status": "queued", "message": f"Order {order_number} queued with error: {str(e)}"}), 200
