@@ -170,7 +170,7 @@ def remove_fulfilled_sku(data):
         rows_to_delete = []
 
         for i, row in enumerate(values):
-            if len(row) > 1 and row[1] == order_number:
+            if len(row) > 1 and row[0] == order_number:
                 row_sku = str(row[3])
                 if not line_items:
                     rows_to_delete.append(i)
