@@ -79,7 +79,7 @@ def process_order(data):
         is_dealer = data.get("is_dealer", False)
         order_created = format_date(data.get("order_created", ""))
         line_items = data.get("line_items", [])
-
+        
         if not line_items:
             logger.warning(f"Order {order_number} has no line items")
             return True
@@ -103,7 +103,7 @@ def process_order(data):
                 order_country = "GB"
 
             rows_data.append([order_number, title, quantity, sku, vendor, eta, customer_email])
-
+        print(line_items)
         start_row = max(2, get_last_row(SPREADSHEET_ID, SHEET_NAME))
         range_to_write = f'{SHEET_NAME}!A{start_row}'
         body = {'values': rows_data}
