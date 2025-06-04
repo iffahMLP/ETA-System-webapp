@@ -43,7 +43,7 @@ def handle_webhook():
             return jsonify({"status": "queued", "message": f"Order {order_number} added to queue"}), 200
         elif action == 'removeFulfilledSKU':
             fulfilled_queue.append(data)
-            save_queue(queue, FULFILLED_QUEUE_FILE)
+            save_queue(fulfilled_queue, FULFILLED_QUEUE_FILE)
             process_queue(FULFILLED_QUEUE_FILE, remove_fulfilled_sku)
             return jsonify({"status": "queued", "message": f"Order {order_number} added to queue"}), 200
         else:
