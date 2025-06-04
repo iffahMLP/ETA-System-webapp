@@ -16,7 +16,7 @@ def update_note(order, config):
 
     for item in order['Line Items']:
         eta = 'Reserved' if item['Latest ETA On Hand'] == 'Ready' else item['Latest ETA On Hand']
-        new_note += f"{item['SKU']} x {str(item['Quantity'])} - {eta}\n"
+        new_note += f"{item['sku']} x {str(item['quantity'])} - {eta}\n"
 
     # Step 1: Get order global ID (GraphQL)
     order_id = order['Order ID']  # ✅ Make sure your order dict includes GraphQL order ID!

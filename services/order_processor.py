@@ -103,7 +103,7 @@ def process_order(data):
                 order_country = "GB"
 
             rows_data.append([order_number, title, quantity, sku, vendor, eta, customer_email])
-        print(line_items)
+
         start_row = max(2, get_last_row(SPREADSHEET_ID, SHEET_NAME))
         range_to_write = f'{SHEET_NAME}!A{start_row}'
         body = {'values': rows_data}
