@@ -46,6 +46,13 @@ def get_last_row(SPREADSHEET_ID, SHEET_NAME):
         logger.error(f"Error getting last row: {str(e)}")
         return 2
 
+def get_sheet_id(SPREADSHEET_ID, SHEET_NAME):
+    spreadsheet = service.spreadsheets().get(spreadsheetId=SPREADSHEET_ID).execute()
+    for sheet in spreadsheet['sheets']:
+        if sheet['properties']['title'] == SHEET_NAME:
+            return sheet['properties']['sheetId']
+    raise Exception(f"Sheet ID not found for {SHEET_NAME}")
+
 def process_order(data):
     if not service:
         logger.error("Google Sheets service not initialized")
@@ -170,6 +177,7 @@ def remove_fulfilled_sku(data):
         rows_to_delete = []
 
         for i, row in enumerate(values):
+            print(f"Processing row {i}: {row}")
             if len(row) > 1 and row[0] == order_number:
                 row_sku = str(row[3])
                 if not line_items:
@@ -182,7 +190,7 @@ def remove_fulfilled_sku(data):
 
         if rows_to_delete:
             rows_to_delete.sort(reverse=True)
-            sheet_id = SPREADSHEET_ID
+            sheet_id = get_sheet_id(SPREADSHEET_ID, SHEET_NAME)
             requests = [{
                 "deleteDimension": {
                     "range": {
