@@ -71,7 +71,7 @@ def process_order(data):
         is_dealer = data.get("is_dealer", False)
         order_created = format_date(data.get("order_created", ""))
         line_items = data.get("line_items", [])
-        print(order_country, customer_lang)
+
         if not line_items:
             logger.warning(f"Order {order_number} has no line items")
             return True
@@ -93,10 +93,6 @@ def process_order(data):
                 order_country = "GB"
             elif "mlpautoteile.de" in url and customer_lang != "en-DE":
                 order_country = "GB"
-
-            print(url)
-            print("Updated", order_country)
-
 
             rows_data.append([order_number, title, quantity, sku, vendor, eta, customer_email])
 
@@ -160,7 +156,7 @@ def remove_fulfilled_sku(data):
     try:
         store = data.get("store")
         SHEET_NAME = f"Orders {store}"
-        order_number = data.get("order_number", "Unknown").lstrip("#")
+        order_number = data.get("order_number", "Unknown")
         line_items = data.get("line_items", [])
         print(f"Processing remove_fulfilled_sku for order {order_number}, line_items: {line_items}")
         logger.info(f"Processing remove_fulfilled_sku for order {order_number}, line_items: {line_items}")
