@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify
 import os
 import json
 import logging
-from config import SECRET_KEY, FAILED_ORDERS_FILE
+from config import SECRET_KEY, FAILED_ORDERS_FILE, QUEUE_FILE, FULFILLED_QUEUE_FILE
 from services.queue_handler import load_queue
 
 view_bp = Blueprint('view_routes', __name__)
@@ -15,20 +15,20 @@ def view_queue():
     if provided_key != SECRET_KEY:
         return jsonify({"error": "Access Denied"}), 403
     try:
-        queue = load_queue()
+        queue = load_queue(QUEUE_FILE)
         logger.info(f"Queue accessed. Size: {len(queue)}")
         return jsonify({"queue_size": len(queue), "orders": queue}), 200
     except Exception as e:
         logger.error(f"Error viewing queue: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-@view_bp.route('/queue_fulfilled', methods=['GET'])
-def view_queue_fulfilled():
+@view_bp.route('/fulfilled_queue', methods=['GET'])
+def view_fulfilled_queue():
     provided_key = request.args.get('key')
     if provided_key != SECRET_KEY:
         return jsonify({"error": "Access Denied"}), 403
     try:
-        queue = load_queue()
+        queue = load_queue(FULFILLED_QUEUE_FILE)
         logger.info(f"Queue accessed. Size: {len(queue)}")
         return jsonify({"queue_size": len(queue), "orders": queue}), 200
     except Exception as e:
