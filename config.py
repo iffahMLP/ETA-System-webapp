@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-SPREADSHEET_ID = '1U4XMkEr1z28Y_nkCzLwYiDj848o1ZW6WT6OPXc2aKjc'
+SPREADSHEET_ID = '1U4XMkEr1z28Y_nkCzLwYiDj848o1ZW6WT6OPXc2aKjc' #test sheet
+SPREADSHEET_ID = '102UjR-rv6X5k3p22x0wE6r-5BWe7e4-FNjx3SbB05Gg'
 SHEET_NAME = 'Orders UK'
 SECRET_KEY = os.getenv('SECRET_KEY', 'abc123')
 GOOGLE_CREDENTIALS = os.getenv('GOOGLE_CREDENTIALS')

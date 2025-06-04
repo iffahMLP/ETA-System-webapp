@@ -119,47 +119,47 @@ def process_order(data):
         ).execute()
         current_order_numbers = [row[0] for row in result_check.get('values', []) if row]
 
-        if order_number in current_order_numbers:
-            # Send email
-            if not is_dealer and customer_email and customer_email not in ['sales@mlperformanceusa.com', 'hello@masata.co.uk']:
-                store_configs, _ = get_store_configs()
-                store_db = store_configs.get(store, store_configs["UK"])  # fallback to UK
+        # if order_number in current_order_numbers:
+        #     # Send email
+        #     if not is_dealer and customer_email and customer_email not in ['sales@mlperformanceusa.com', 'hello@masata.co.uk']:
+        #         store_configs, _ = get_store_configs()
+        #         store_db = store_configs.get(store, store_configs["UK"])  # fallback to UK
 
-                order_info = {
-                    "Order Number": order_number,
-                    "Order ID": order_id,
-                    "Line Items": line_items
-                }
+        #         order_info = {
+        #             "Order Number": order_number,
+        #             "Order ID": order_id,
+        #             "Line Items": line_items
+        #         }
 
-                draft = first_draft(order_info, customer_name, store_db, store, order_country)
-                send_email(customer_email, draft, store_db)
+        #         draft = first_draft(order_info, customer_name, store_db, store, order_country)
+        #         send_email(customer_email, draft, store_db)
 
-                # Update columns I and K
-                for item in line_items:
-                    row_index = start_row + item["Index"]
-                    service.spreadsheets().values().update(
-                        spreadsheetId=SPREADSHEET_ID,
-                        range=f'{SHEET_NAME}!H{row_index}',
-                        valueInputOption='RAW',
-                        body={'values': [[str(item["Latest ETA On Hand"])]]}
-                    ).execute()
-                    service.spreadsheets().values().update(
-                        spreadsheetId=SPREADSHEET_ID,
-                        range=f'{SHEET_NAME}!J{row_index}',
-                        valueInputOption='RAW',
-                        body={'values': [[f"Sent On {datetime.today().strftime('%d-%m-%Y')}"]]}
-                    ).execute()
+        #         # Update columns I and K
+        #         for item in line_items:
+        #             row_index = start_row + item["Index"]
+        #             service.spreadsheets().values().update(
+        #                 spreadsheetId=SPREADSHEET_ID,
+        #                 range=f'{SHEET_NAME}!H{row_index}',
+        #                 valueInputOption='RAW',
+        #                 body={'values': [[str(item["Latest ETA On Hand"])]]}
+        #             ).execute()
+        #             service.spreadsheets().values().update(
+        #                 spreadsheetId=SPREADSHEET_ID,
+        #                 range=f'{SHEET_NAME}!J{row_index}',
+        #                 valueInputOption='RAW',
+        #                 body={'values': [[f"Sent On {datetime.today().strftime('%d-%m-%Y')}"]]}
+        #             ).execute()
 
-                if store == "US":
-                    update_note(order_info, store_configs["UK"])
-                    order_info['Order ID'] = 'gid://shopify/Order/' + str(data.get("order_id_us", ""))
-                update_note(order_info, store_db)
+        #         if store == "US":
+        #             update_note(order_info, store_configs["UK"])
+        #             order_info['Order ID'] = 'gid://shopify/Order/' + str(data.get("order_id_us", ""))
+        #         update_note(order_info, store_db)
 
-                logger.info(f"Email sent to {customer_email} and spreadsheet updated for {order_number}")
-            else:
-                logger.info(f"No email sent for dealer or skipped emails for {order_number}")
-        else:
-            logger.info(f"Order {order_number} was removed as duplicate or invalid. Skipping email.")
+        #         logger.info(f"Email sent to {customer_email} and spreadsheet updated for {order_number}")
+        #     else:
+        #         logger.info(f"No email sent for dealer or skipped emails for {order_number}")
+        # else:
+        #     logger.info(f"Order {order_number} was removed as duplicate or invalid. Skipping email.")
 
         return True
     except Exception as e:
