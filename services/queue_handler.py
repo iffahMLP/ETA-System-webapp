@@ -26,6 +26,7 @@ def save_queue(queue, queue_file):
         logger.error(f"Error saving queue: {str(e)}")
 
 def process_queue(queue_file, processor_func):
+    print(f"Processing queue from {queue_file}")
     queue = load_queue(queue_file)
     if not queue:
         logger.info("Queue is empty, nothing to process")

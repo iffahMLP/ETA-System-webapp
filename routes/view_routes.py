@@ -52,6 +52,30 @@ def view_failed_orders():
     except Exception as e:
         logger.error(f"Error reading failed orders: {str(e)}")
         return jsonify({"error": str(e)}), 500
+    
+@view_bp.route('/clear_queue', methods=['POST'])
+def clear_queue_view():
+    provided_key = request.args.get('key')
+    if provided_key != SECRET_KEY:
+        return jsonify({"error": "Access Denied"}), 403
+
+    queue_type = request.args.get('type', 'orders')  # default: orders queue
+    if queue_type == 'fulfilled':
+        queue_file = FULFILLED_QUEUE_FILE
+    else:
+        queue_file = QUEUE_FILE
+
+    try:
+        with open(queue_file, 'w') as f:
+            json.dump([], f)  # Clear the queue
+
+        logger.info(f"Cleared {queue_type} queue from view route.")
+        return jsonify({"status": "success", "message": f"{queue_type.capitalize()} queue cleared."}), 200
+
+    except Exception as e:
+        logger.error(f"Error clearing queue: {str(e)}")
+        return jsonify({"error": f"Failed to clear {queue_type} queue: {str(e)}"}), 500
+
 
 @view_bp.route('/', methods=['GET'])
 def health_check():
