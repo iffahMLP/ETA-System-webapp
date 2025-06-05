@@ -243,7 +243,7 @@ def check_and_notify_eta_updates():
             latest_eta_quoted_idx = header.index('Latest ETA Quoted')
             order_number_idx = header.index('Order Number')
             sku_idx = header.index('SKU')
-            title_idx = header.index('Title')
+            title_idx = header.index('Product')
             quantity_idx = header.index('Quantity')
 
             # Prepare updates
