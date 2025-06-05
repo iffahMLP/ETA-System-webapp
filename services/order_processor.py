@@ -259,7 +259,7 @@ def check_and_notify_eta_updates():
                 
 
                 # Check for mismatch
-                if latest_eta_on_hand and latest_eta_on_hand != latest_eta_quoted:
+                if latest_eta_quoted and latest_eta_on_hand and latest_eta_on_hand != latest_eta_quoted and order_number == "#MLP152009":
                     logger.info(f"ETA update found for row {i}: {email}")
                     
                     store_configs, _ = get_store_configs()
