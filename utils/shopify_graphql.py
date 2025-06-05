@@ -48,7 +48,7 @@ def update_note(order, config):
     if not existing_note:
         combined_note = new_note
     else:
-      combined_note = existing_note + "\n\n" + new_note
+      combined_note = existing_note + "\n" + new_note
 
     # Step 3: Run the mutation to update the note
     mutation = """
