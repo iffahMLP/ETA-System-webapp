@@ -8,11 +8,13 @@ from utils.helpers import format_date
 from services.sheets_service import get_service, update_sheet_with_retry
 from utils.formulas import delete_rows, delete_duplicate_rows
 from utils.eta import get_eta, build_eta_lookup, load_sheet_data
-from utils.email_utils import first_draft, send_email
-from utils.shopify_graphql import update_note
+from utils.email_utils import first_draft, send_email, follow_up_draft
+from utils.shopify_graphql import update_note, get_order_data
 
 logger = logging.getLogger(__name__)
 service = get_service()
+
+stores = ['UK', 'US', 'EU']
 
 ARRIVAL_SHEET_ID = "1hElJ_sWXGy1-Psk9x2EPrXeZuFjKreR_B7cj3voxBIA"
 arrival_data = load_sheet_data(ARRIVAL_SHEET_ID, "General!A1:G")
@@ -119,47 +121,47 @@ def process_order(data):
         ).execute()
         current_order_numbers = [row[0] for row in result_check.get('values', []) if row]
 
-        # if order_number in current_order_numbers:
-        #     # Send email
-        #     if not is_dealer and customer_email and customer_email not in ['sales@mlperformanceusa.com', 'hello@masata.co.uk']:
-        #         store_configs, _ = get_store_configs()
-        #         store_db = store_configs.get(store, store_configs["UK"])  # fallback to UK
+        if order_number == '#MLP152009' and order_number in current_order_numbers:
+            # Send email
+            if not is_dealer and customer_email and customer_email not in ['sales@mlperformanceusa.com', 'hello@masata.co.uk']:
+                store_configs, _ = get_store_configs()
+                store_db = store_configs.get(store, store_configs["UK"])  # fallback to UK
 
-        #         order_info = {
-        #             "Order Number": order_number,
-        #             "Order ID": order_id,
-        #             "Line Items": line_items
-        #         }
+                order_info = {
+                    "Order Number": order_number,
+                    "Order ID": order_id,
+                    "Line Items": line_items
+                }
 
-        #         draft = first_draft(order_info, customer_name, store_db, store, order_country)
-        #         send_email(customer_email, draft, store_db)
+                draft = first_draft(order_info, customer_name, store_db, store, order_country)
+                send_email(customer_email, draft, store_db)
 
-        #         # Update columns I and K
-        #         for item in line_items:
-        #             row_index = start_row + item["Index"]
-        #             service.spreadsheets().values().update(
-        #                 spreadsheetId=SPREADSHEET_ID,
-        #                 range=f'{SHEET_NAME}!H{row_index}',
-        #                 valueInputOption='RAW',
-        #                 body={'values': [[str(item["Latest ETA On Hand"])]]}
-        #             ).execute()
-        #             service.spreadsheets().values().update(
-        #                 spreadsheetId=SPREADSHEET_ID,
-        #                 range=f'{SHEET_NAME}!J{row_index}',
-        #                 valueInputOption='RAW',
-        #                 body={'values': [[f"Sent On {datetime.today().strftime('%d-%m-%Y')}"]]}
-        #             ).execute()
+                # Update columns I and K
+                for item in line_items:
+                    row_index = start_row + item["Index"]
+                    service.spreadsheets().values().update(
+                        spreadsheetId=SPREADSHEET_ID,
+                        range=f'{SHEET_NAME}!H{row_index}',
+                        valueInputOption='RAW',
+                        body={'values': [[str(item["Latest ETA On Hand"])]]}
+                    ).execute()
+                    service.spreadsheets().values().update(
+                        spreadsheetId=SPREADSHEET_ID,
+                        range=f'{SHEET_NAME}!J{row_index}',
+                        valueInputOption='RAW',
+                        body={'values': [[f"Sent On {datetime.today().strftime('%d-%m-%Y')}"]]}
+                    ).execute()
 
-        #         if store == "US":
-        #             update_note(order_info, store_configs["UK"])
-        #             order_info['Order ID'] = 'gid://shopify/Order/' + str(data.get("order_id_us", ""))
-        #         update_note(order_info, store_db)
+                if store == "US":
+                    update_note(order_info, store_configs["UK"])
+                    order_info['Order ID'] = 'gid://shopify/Order/' + str(data.get("order_id_us", ""))
+                update_note(order_info, store_db)
 
-        #         logger.info(f"Email sent to {customer_email} and spreadsheet updated for {order_number}")
-        #     else:
-        #         logger.info(f"No email sent for dealer or skipped emails for {order_number}")
-        # else:
-        #     logger.info(f"Order {order_number} was removed as duplicate or invalid. Skipping email.")
+                logger.info(f"Email sent to {customer_email} and spreadsheet updated for {order_number}")
+            else:
+                logger.info(f"No email sent for dealer or skipped emails for {order_number}")
+        else:
+            logger.info(f"Order {order_number} was removed as duplicate or invalid. Skipping email.")
 
         return True
     except Exception as e:
@@ -217,3 +219,108 @@ def remove_fulfilled_sku(data):
     except Exception as e:
         logger.error(f"Error in remove_fulfilled_sku for order {order_number}: {str(e)}")
         return jsonify({"status": "error", "message": f"Processing failed: {str(e)}"}), 500
+
+
+def check_and_notify_eta_updates():
+    for store in stores:
+        logger.info(f"Checking ETA updates for {store} store")
+        try:
+            SHEET_NAME = f"Orders {store}"
+            # Fetch the data
+            result = service.spreadsheets().values().get(
+                spreadsheetId=SPREADSHEET_ID, range=f'{SHEET_NAME}!A:N'
+            ).execute()
+            rows = result.get('values', [])
+
+            if not rows:
+                logger.info("No data found.")
+                return
+
+            # Identify indices
+            header = rows[0]
+            latest_eta_on_hand_idx = header.index('Latest ETA On Hand')
+            email_idx = header.index('Email')
+            latest_eta_quoted_idx = header.index('Latest ETA Quoted')
+            order_number_idx = header.index('Order Number')
+            sku_idx = header.index('SKU')
+            title_idx = header.index('Title')
+            quantity_idx = header.index('Quantity')
+
+            # Prepare updates
+            updates = []
+            for i, row in enumerate(rows[1:], start=2):  # Skip header, 1-based index
+                latest_eta_on_hand = row[latest_eta_on_hand_idx] if len(row) > latest_eta_on_hand_idx else ""
+                latest_eta_quoted = row[latest_eta_quoted_idx] if len(row) > latest_eta_quoted_idx else ""
+                email = row[email_idx] if len(row) > email_idx else ""
+                order_number = row[order_number_idx] if len(row) > order_number_idx else ""
+                sku = row[sku_idx] if len(row) > sku_idx else ""
+                title = row[title_idx] if len(row) > title_idx else ""
+                quantity = row[quantity_idx] if len(row) > quantity_idx else ""
+                
+
+                # Check for mismatch
+                if latest_eta_on_hand and latest_eta_on_hand != latest_eta_quoted:
+                    logger.info(f"ETA update found for row {i}: {email}")
+                    
+                    store_configs, _ = get_store_configs()
+                    store_db = store_configs.get(store, store_configs["UK"])  # fallback to UK
+
+                    order_info = {
+                        "Order Number": order_number,
+                        "Order ID": '',
+                        "Line Items": [{
+                            "title": title,  # Adjust based on your actual column index for title
+                            "quantity": quantity,
+                            "sku": sku,
+                            "Latest ETA On Hand": latest_eta_on_hand
+                        }]
+                    }
+
+                    graphql_order_data = get_order_data(order_number, store_db)
+                    order_info['Order ID'] = graphql_order_data.get('Order ID', '')
+                    domain = graphql_order_data.get('Domain', '')
+                    customer_lang = graphql_order_data.get('Locale', 'en-GB')
+                    customer_name = graphql_order_data.get('Customer First Name', 'Customer')
+
+                    if "mlperformance.co.uk" in domain:
+                        order_country = "GB"
+                    elif "mlpautoteile.de" in domain and customer_lang == "en-DE":
+                        order_country = "DE"
+                    elif store == "US":
+                        order_country = "GB"
+                    elif "mlpautoteile.de" in domain and customer_lang != "en-DE":
+                        order_country = "GB"
+            
+                    draft = follow_up_draft(order_info, customer_name, store_db, store, order_country)
+                    send_email(email, draft, store_db)  # your existing email sender!
+
+                    # Update Latest ETA Quoted
+                    updates.append({
+                        'range': f'{SHEET_NAME}!H{i}',  # Column H for Latest ETA Quoted
+                        'values': [[latest_eta_on_hand]]
+                    })
+
+                    updates.append({
+                        'range': f'{SHEET_NAME}!K{i}',  # Column J: Last Email Sent?
+                        'values': [[f"Sent On {datetime.today().strftime('%d-%m-%Y')}"]]
+                    })
+
+                    update_note(order_info, store_db)
+                    if store == "US":
+                        store_db = store_configs["UK"]
+                        graphql_order_data = get_order_data(order_number, store_db)
+                        order_info['Order ID'] = graphql_order_data.get('Order ID', '')
+                        update_note(order_info, store_configs["UK"])
+                    
+            # Batch update to Google Sheets
+            if updates:
+                body = {'valueInputOption': 'RAW', 'data': updates}
+                service.spreadsheets().values().batchUpdate(
+                    spreadsheetId=SPREADSHEET_ID, body=body
+                ).execute()
+                logger.info("Updated Latest ETA Quoted for all notified rows.")
+            else:
+                logger.info("No ETA updates found.")
+
+        except Exception as e:
+            logger.error(f"Error in check_and_notify_eta_updates: {str(e)}")

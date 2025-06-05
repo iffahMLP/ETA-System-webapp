@@ -43,7 +43,6 @@ def update_note(order, config):
     except (KeyError, TypeError):
         logger.error(f"Failed to retrieve order data for {order['Order Number']}")
         return
-        return
 
     # Step 2: Combine old + new note
     if not existing_note:
@@ -87,3 +86,49 @@ def update_note(order, config):
     else:
         logger.info(f"Note updated for order {order_data['name']}")
     print(f"Note updated for order {order_data['name']}")
+
+
+def get_order_data(order_number, config):
+    shopurl = get_store_url(config)
+
+    # Step 1: Get order data (GraphQL)
+    query_order = """
+    query {
+      orders(first: 1, query: "name:%s") {
+        edges {
+          node {
+            id
+            name
+            statusPageUrl
+            customer {
+              firstName
+              locale
+            }
+          }
+        }
+      }
+    }
+  """ % order_number
+
+
+    response_query = requests.post(
+        shopurl,
+        json={"query": query_order}
+    )
+    result_query = response_query.json()
+    try:
+        order_response = result_query['data']['orders']['edges'][0]['node']
+        logger.info(f"Retrieved data for order {order_number}")
+
+        order_data = {
+            'Order ID': order_response['id'],
+            'Order Number': order_response['name'],
+            'Customer First Name': order_response['customer']['firstName'],
+            'Locale': order_response['customer']['locale'],
+            'Domain': order_response['statusPageUrl'],
+        }
+        return order_data
+
+    except (KeyError, TypeError):
+        logger.error(f"Failed to retrieve order data for {order_number}")
+        return
