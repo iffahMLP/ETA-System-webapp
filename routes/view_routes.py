@@ -77,7 +77,7 @@ def clear_queue_view():
         logger.error(f"Error clearing queue: {str(e)}")
         return jsonify({"error": f"Failed to clear {queue_type} queue: {str(e)}"}), 500
 
-@view_bp.route('/check_eta_updates', methods=['POST'])
+@view_bp.route('/check_eta_updates', methods=['GET'])
 def check_all_eta_updates():
     provided_key = request.args.get('key')
     if provided_key != SECRET_KEY:
