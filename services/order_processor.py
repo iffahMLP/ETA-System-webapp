@@ -121,7 +121,9 @@ def process_order(data):
         ).execute()
         current_order_numbers = [row[0] for row in result_check.get('values', []) if row]
 
-        if order_number == '#MLP152009' and order_number in current_order_numbers:
+        if order_number and order_number in current_order_numbers:
+        # if order_number == '#MLP152009' and order_number in current_order_numbers:
+        
             # Send email
             if not is_dealer and customer_email and customer_email not in ['sales@mlperformanceusa.com', 'hello@masata.co.uk']:
                 store_configs, _ = get_store_configs()
