@@ -20,7 +20,9 @@ def extract_days(eta: str) -> int | None:
     if not match:
         return None
     days = int(match[-1])
-    return days * 5 if "week" in eta.lower() else days
+    if "week" in eta.lower():
+        return days * 5
+    return days
 
 def add_business_days(start_date_str: str, days_to_add: int) -> str:
     date = datetime.fromisoformat(start_date_str.replace("Z", "+00:00"))
@@ -33,9 +35,44 @@ def add_business_days(start_date_str: str, days_to_add: int) -> str:
 
 def calculate_eta(order_created: str, eta_str: str) -> str:
     days = extract_days(eta_str)
-    if not days:
-        return "ETA Not Available"
-    return add_business_days(order_created, days)
+    if days:
+        return add_business_days(order_created, days)
+    # Fallback for month-based ETA
+    return calculate_month_eta(order_created, eta_str)
+
+def calculate_month_eta(order_created: str, eta_str: str) -> str:
+    month_keywords = ["january", "february", "march", "april", "may", "june",
+                       "july", "august", "september", "october", "november", "december"]
+    eta_lower = eta_str.lower()
+    for month in month_keywords:
+        if month in eta_lower:
+            today = datetime.fromisoformat(order_created.replace("Z", "+00:00"))
+            eta_month = datetime.strptime(month.capitalize(), "%B").month
+            eta_year = today.year
+            if eta_month < today.month:
+                eta_year += 1  # move to next year if needed
+            # Handle qualifiers like "Early", "Mid", "Late"
+            if "early" in eta_lower:
+                day = 5
+            elif "mid" in eta_lower:
+                day = 15
+            elif "late" in eta_lower:
+                day = 25
+            else:
+                day = 1
+            eta_date = datetime(eta_year, eta_month, day)
+            return eta_date.strftime("%d/%m/%Y")
+    return eta_str
+
+def calculate_eta_from_email(order_created: str, eta_str: str) -> str:
+    eta_str = eta_str.strip()
+    if any(x in eta_str.lower() for x in ["day", "week"]):
+        return calculate_eta(order_created, eta_str)
+    if any(month in eta_str.lower() for month in ["january", "february", "march", "april",
+                                                   "may", "june", "july", "august",
+                                                   "september", "october", "november", "december"]):
+        return calculate_month_eta(order_created, eta_str)
+    return eta_str
 
 def build_eta_lookup(arrival_data):
     eta_map = {}

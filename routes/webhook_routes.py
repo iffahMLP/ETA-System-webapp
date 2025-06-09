@@ -5,6 +5,7 @@ from config import SECRET_KEY
 from config import QUEUE_FILE, FULFILLED_QUEUE_FILE
 from services.queue_handler import load_queue, save_queue, process_queue
 from services.order_processor import process_order, remove_fulfilled_sku
+from services.order_processor import check_and_notify_eta_updates
 from utils.helpers import clean_json
 
 webhook_bp = Blueprint('webhook_routes', __name__)
@@ -90,3 +91,13 @@ def handle_webhook():
             queue.append(error_data)
             save_queue(queue, QUEUE_FILE)
         return jsonify({"status": "queued", "message": f"Order {order_number} queued with error: {str(e)}"}), 200
+
+
+@webhook_bp.route('/check_eta_updates', methods=['GET'])
+def check_all_eta_updates():
+    provided_key = request.args.get('key')
+    if provided_key != SECRET_KEY:
+        return jsonify({"error": "Access Denied"}), 403
+
+    check_and_notify_eta_updates()
+    return jsonify({"status": "success", "message": "ETA updates check complete!"}), 200

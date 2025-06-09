@@ -5,7 +5,6 @@ import json
 import logging
 from config import SECRET_KEY, FAILED_ORDERS_FILE, QUEUE_FILE, FULFILLED_QUEUE_FILE
 from services.queue_handler import load_queue
-from services.order_processor import check_and_notify_eta_updates
 
 view_bp = Blueprint('view_routes', __name__)
 logger = logging.getLogger(__name__)
@@ -76,15 +75,6 @@ def clear_queue_view():
     except Exception as e:
         logger.error(f"Error clearing queue: {str(e)}")
         return jsonify({"error": f"Failed to clear {queue_type} queue: {str(e)}"}), 500
-
-@view_bp.route('/check_eta_updates', methods=['GET'])
-def check_all_eta_updates():
-    provided_key = request.args.get('key')
-    if provided_key != SECRET_KEY:
-        return jsonify({"error": "Access Denied"}), 403
-
-    check_and_notify_eta_updates()
-    return jsonify({"status": "success", "message": "ETA updates check complete!"}), 200
 
 
 @view_bp.route('/', methods=['GET'])

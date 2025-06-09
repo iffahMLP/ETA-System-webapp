@@ -8,29 +8,6 @@ from googleapiclient.errors import HttpError
 logger = logging.getLogger(__name__)
 service = get_service()
 
-def apply_formulas():
-    try:
-        result = service.spreadsheets().values().get(
-            spreadsheetId=SPREADSHEET_ID, range=f'{SHEET_NAME}!A:N'
-        ).execute()
-        values = result.get('values', [])
-        last_row = len(values) + 1 if values else 2
-
-        assign_type_formulas = []
-        pic_formulas = []
-        supplier_formulas = []
-        for row in range(2, last_row + 1):
-            assign_type_formulas.append([f'=IFNA(IF(F{row}="US",IFNA(XLOOKUP(E{row},assign_types!D:D,assign_types!E:E),XLOOKUP(E{row},assign_types!A:A,assign_types!B:B)),XLOOKUP(E{row},assign_types!A:A,assign_types!B:B)),"")'])
-            pic_formulas.append([f'=IFNA(IF(F{row}="US",IFNA(XLOOKUP(E{row},assign_types!E:E,assign_types!F:F),XLOOKUP(E{row},assign_types!A:A,assign_types!C:C)),XLOOKUP(E{row},assign_types!A:A,assign_types!C:C)),"")'])
-            supplier_formulas.append([f"=IFNA(XLOOKUP(E{row},'[Auto] Supplier'!A:A,'[Auto] Supplier'!B:B),\"\")"])
-
-        update_sheet_with_retry(service, SPREADSHEET_ID, f'{SHEET_NAME}!G2:G{last_row}', {'values': assign_type_formulas}, 'USER_ENTERED')
-        update_sheet_with_retry(service, SPREADSHEET_ID, f'{SHEET_NAME}!I2:I{last_row}', {'values': pic_formulas}, 'USER_ENTERED')
-        update_sheet_with_retry(service, SPREADSHEET_ID, f'{SHEET_NAME}!H2:H{last_row}', {'values': supplier_formulas}, 'USER_ENTERED')
-
-    except Exception as e:
-        logger.error(f"Error applying formulas: {str(e)}")
-        raise
 
 def get_sheet_id():
     try:
