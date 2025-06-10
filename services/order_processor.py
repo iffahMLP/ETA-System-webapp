@@ -215,12 +215,14 @@ def remove_fulfilled_sku(data):
                 spreadsheetId=SPREADSHEET_ID, body={"requests": requests}
             ).execute()
             logger.info(f"Deleted rows: {rows_to_delete}")
+            return True  # ✅ rows were found and deleted
 
+        logger.info(f"No matching rows for {order_number}, no deletion needed.")
+        return False  # ❌ no matching rows
 
-        return jsonify({"status": "success", "message": "Fulfilled SKUs removed or rows deleted"}), 200
     except Exception as e:
         logger.error(f"Error in remove_fulfilled_sku for order {order_number}: {str(e)}")
-        return jsonify({"status": "error", "message": f"Processing failed: {str(e)}"}), 500
+        return False
 
 
 def check_and_notify_eta_updates():

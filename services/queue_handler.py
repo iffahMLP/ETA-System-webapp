@@ -33,6 +33,7 @@ def process_queue(queue_file, processor_func):
 
     updated_queue = []
     max_retries = 3
+
     for order in queue:
         order_number = order.get("order_number", "Unknown")
         logger.info(f"Inspecting queued order {order_number}")
@@ -55,11 +56,18 @@ def process_queue(queue_file, processor_func):
 
         order["retries"] = retries + 1
         logger.info(f"Attempting to process valid order {order_number}, retry {retries + 1}/{max_retries}")
-        if processor_func(order):
+        success = processor_func(order)
+
+        if success:
             logger.info(f"Order {order_number} processed successfully, removing from queue")
         else:
-            logger.warning(f"Order {order_number} failed processing, keeping in queue")
-            updated_queue.append(order)
+            if processor_func.__name__ == 'remove_fulfilled_sku':
+                logger.warning(f"Order {order_number} not found in sheet, removing from queue permanently")
+                # 🚫 Do not re-add to updated_queue
+            else:
+                logger.warning(f"Order {order_number} failed processing, keeping in queue")
+                updated_queue.append(order)
+
         time.sleep(1)
 
     save_queue(updated_queue, queue_file)
