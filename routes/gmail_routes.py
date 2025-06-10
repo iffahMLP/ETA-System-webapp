@@ -20,7 +20,7 @@ def gmail_eta_update():
         updates = check_new_eta_emails()
         update_latest_eta_in_sheet(updates)
 
-        check_and_notify_eta_updates()
+        # check_and_notify_eta_updates()
 
         return jsonify({
             "status": "success",

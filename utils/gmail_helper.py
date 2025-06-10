@@ -47,7 +47,7 @@ def check_new_eta_emails():
             order_created = msg_data['internalDate']  # Milliseconds since epoch
             order_created_dt = datetime.fromtimestamp(int(order_created) / 1000.0).isoformat()
             exact_eta = calculate_eta_from_email(order_created_dt, eta_str)
-
+            print(f"Order: {order_number}, SKU: {sku}, ETA: {eta_str}, Exact ETA: {exact_eta}, Order Created: {order_created_dt}")
             updates.append({
                 "order_number": order_number,
                 "sku": sku,
@@ -87,7 +87,7 @@ def update_latest_eta_in_sheet(updates):
 
         for i, row in enumerate(rows[1:], start=2):
             if len(row) > max(order_number_idx, sku_idx):
-                if row[order_number_idx] == order_number and row[sku_idx] == sku:
+                if row[order_number_idx] == "#MLP152009" and row[order_number_idx] == order_number and row[sku_idx] == sku:
                     logger.info(f"Updating {sheet_name} row {i} with new ETA: {new_eta}")
                     sheet_updates.append({
                         'range': f'{sheet_name}!F{i}',  # Column F
