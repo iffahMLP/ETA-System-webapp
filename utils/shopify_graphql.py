@@ -100,6 +100,7 @@ def get_order_data(order_number, config):
             id
             name
             statusPageUrl
+            tags
             customer {
               firstName
               locale
@@ -126,6 +127,7 @@ def get_order_data(order_number, config):
             'Customer First Name': order_response['customer']['firstName'],
             'Locale': order_response['customer']['locale'],
             'Domain': order_response['statusPageUrl'],
+            'Skip Email': True if 'Skip Email' in order_response['tags'] else False,
         }
         return order_data
 

@@ -126,9 +126,9 @@ def send_email(recipient, draft, db):
         sender = db['SENDER_EMAIL']
         password = db['SENDER_PASSWORD']
 
-        # sender = 'iffah@mlperformance.co.uk'
-        # password = "owee xytq urot uthi" #IffahMLP!
-        # recipient = 'iffah@mlperformance.co.uk'
+        sender = 'iffah@mlperformance.co.uk'
+        password = "owee xytq urot uthi" #IffahMLP!
+        recipient = 'iffah@mlperformance.co.uk'
 
         s.login(sender, password)
 

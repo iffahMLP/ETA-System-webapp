@@ -24,20 +24,6 @@ WEBSTOCKS_SHEET_ID = "102UjR-rv6X5k3p22x0wE6r-5BWe7e4-FNjx3SbB05Gg"
 webstocks_data = load_sheet_data(WEBSTOCKS_SHEET_ID, "webstocks!A2:A")
 stock_data = set(row[0] for row in webstocks_data if row)  # Flatten to set of SKUs/barcodes
 
-def group_skus_by_vendor(line_items):
-    sku_by_vendor = {}
-    has_vin_by_vendor = {}
-    for item in line_items:
-        sku, vendor, vin = item.get('sku', 'Unknown SKU'), item.get('vendor', 'Unknown Vendor'), item.get('vin', '')
-        if vendor not in sku_by_vendor:
-            sku_by_vendor[vendor] = [sku]
-            has_vin_by_vendor[vendor] = bool(vin)
-        else:
-            sku_by_vendor[vendor].append(sku)
-            if vin:
-                has_vin_by_vendor[vendor] = True
-    return sku_by_vendor, has_vin_by_vendor
-
 def get_last_row(SPREADSHEET_ID, SHEET_NAME):
     try:
         result = service.spreadsheets().values().get(
@@ -107,6 +93,35 @@ def process_order(data):
             rows_data.append([order_number, title, quantity, sku, vendor, eta, customer_email])
 
         start_row = max(2, get_last_row(SPREADSHEET_ID, SHEET_NAME))
+        number_of_rows_needed = len(rows_data)
+
+        # --- RESIZE SHEET IF NEEDED ---
+        sheet_metadata = service.spreadsheets().get(spreadsheetId=SPREADSHEET_ID).execute()
+        sheet_id = None
+        total_rows = 0
+        for sheet in sheet_metadata.get('sheets', []):
+            if sheet['properties']['title'] == SHEET_NAME:
+                sheet_id = sheet['properties']['sheetId']
+                total_rows = sheet['properties']['gridProperties']['rowCount']
+                break
+
+        if sheet_id and (start_row + number_of_rows_needed > total_rows):
+            extra_rows = (start_row + number_of_rows_needed) - total_rows
+            logger.info(f"Resizing sheet: adding {extra_rows} rows to {SHEET_NAME}")
+            service.spreadsheets().batchUpdate(
+                spreadsheetId=SPREADSHEET_ID,
+                body={
+                    "requests": [{
+                        "appendDimension": {
+                            "sheetId": sheet_id,
+                            "dimension": "ROWS",
+                            "length": extra_rows
+                        }
+                    }]
+                }
+            ).execute()
+            
+        # --- WRITE TO SHEET ---
         range_to_write = f'{SHEET_NAME}!A{start_row}'
         body = {'values': rows_data}
         update_sheet_with_retry(service, SPREADSHEET_ID, range_to_write, body)
@@ -155,9 +170,9 @@ def process_order(data):
                     ).execute()
 
                 if store == "US":
-                    update_note(order_info, store_configs["UK"])
+                    # update_note(order_info, store_configs["UK"])
                     order_info['Order ID'] = 'gid://shopify/Order/' + str(data.get("order_id_us", ""))
-                update_note(order_info, store_db)
+                # update_note(order_info, store_db)
 
                 logger.info(f"Email sent to {customer_email} and spreadsheet updated for {order_number}")
             else:
@@ -263,7 +278,7 @@ def check_and_notify_eta_updates():
                 
 
                 # Check for mismatch
-                if latest_eta_quoted and latest_eta_on_hand and latest_eta_on_hand != latest_eta_quoted and order_number == "#MLP152009":
+                if latest_eta_quoted and latest_eta_on_hand and latest_eta_on_hand != latest_eta_quoted:
                     logger.info(f"ETA update found for row {i}: {email}")
                     
                     store_configs, _ = get_store_configs()
@@ -285,6 +300,7 @@ def check_and_notify_eta_updates():
                     domain = graphql_order_data.get('Domain', '')
                     customer_lang = graphql_order_data.get('Locale', 'en-GB')
                     customer_name = graphql_order_data.get('Customer First Name', 'Customer')
+                    skip_email = graphql_order_data.get('Skip Email', False)
 
                     if "mlperformance.co.uk" in domain:
                         order_country = "GB"
@@ -294,28 +310,29 @@ def check_and_notify_eta_updates():
                         order_country = "GB"
                     elif "mlpautoteile.de" in domain and customer_lang != "en-DE":
                         order_country = "GB"
-            
-                    draft = follow_up_draft(order_info, customer_name, store_db, store, order_country)
-                    send_email(email, draft, store_db)  # your existing email sender!
 
-                    # Update Latest ETA Quoted
-                    updates.append({
-                        'range': f'{SHEET_NAME}!H{i}',  # Column H for Latest ETA Quoted
-                        'values': [[latest_eta_on_hand]]
-                    })
+                    if not skip_email:
+                        draft = follow_up_draft(order_info, customer_name, store_db, store, order_country)
+                        send_email(email, draft, store_db)  # your existing email sender!
 
-                    updates.append({
-                        'range': f'{SHEET_NAME}!K{i}',  # Column J: Last Email Sent?
-                        'values': [[f"Sent On {datetime.today().strftime('%d-%m-%Y')}"]]
-                    })
+                        # Update Latest ETA Quoted
+                        updates.append({
+                            'range': f'{SHEET_NAME}!H{i}',  # Column H for Latest ETA Quoted
+                            'values': [[latest_eta_on_hand]]
+                        })
 
-                    update_note(order_info, store_db)
-                    if store == "US":
-                        store_db = store_configs["UK"]
-                        graphql_order_data = get_order_data(order_number, store_db)
-                        order_info['Order ID'] = graphql_order_data.get('Order ID', '')
-                        update_note(order_info, store_configs["UK"])
-                    
+                        updates.append({
+                            'range': f'{SHEET_NAME}!K{i}',  # Column J: Last Email Sent?
+                            'values': [[f"Sent On {datetime.today().strftime('%d-%m-%Y')}"]]
+                        })
+
+                        update_note(order_info, store_db)
+                        if store == "US":
+                            store_db = store_configs["UK"]
+                            graphql_order_data = get_order_data(order_number, store_db)
+                            order_info['Order ID'] = graphql_order_data.get('Order ID', '')
+                            update_note(order_info, store_configs["UK"])
+                        
             # Batch update to Google Sheets
             if updates:
                 body = {'valueInputOption': 'RAW', 'data': updates}
