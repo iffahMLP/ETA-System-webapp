@@ -105,21 +105,29 @@ def process_order(data):
                 total_rows = sheet['properties']['gridProperties']['rowCount']
                 break
 
-        if sheet_id and (start_row + number_of_rows_needed > total_rows):
-            extra_rows = (start_row + number_of_rows_needed) - total_rows
-            logger.info(f"Resizing sheet: adding {extra_rows} rows to {SHEET_NAME}")
-            service.spreadsheets().batchUpdate(
-                spreadsheetId=SPREADSHEET_ID,
-                body={
-                    "requests": [{
-                        "appendDimension": {
-                            "sheetId": sheet_id,
-                            "dimension": "ROWS",
-                            "length": extra_rows
-                        }
-                    }]
-                }
-            ).execute()
+        if sheet_id:
+            required_row_count = start_row + number_of_rows_needed
+            if required_row_count > total_rows:
+                logger.info(f"Resizing sheet '{SHEET_NAME}' from {total_rows} to {required_row_count} rows")
+                service.spreadsheets().batchUpdate(
+                    spreadsheetId=SPREADSHEET_ID,
+                    body={
+                        "requests": [
+                            {
+                                "updateSheetProperties": {
+                                    "properties": {
+                                        "sheetId": sheet_id,
+                                        "gridProperties": {
+                                            "rowCount": required_row_count
+                                        }
+                                    },
+                                    "fields": "gridProperties.rowCount"
+                                }
+                            }
+                        ]
+                    }
+                ).execute()
+
             
         # --- WRITE TO SHEET ---
         range_to_write = f'{SHEET_NAME}!A{start_row}'
