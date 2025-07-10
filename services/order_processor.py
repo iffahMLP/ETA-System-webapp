@@ -159,6 +159,8 @@ def process_order(data):
             try:
                 draft = error_draft(str(e))
                 error_email = 'iffah@mlpeformance.co.uk'
+                store_configs, _ = get_store_configs()
+                store_db = store_configs.get("UK")
                 send_email(error_email, draft, store_db)
                 logger.info(f"Error email sent for order {order_number}")
             except Exception as email_error:
