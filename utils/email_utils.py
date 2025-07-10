@@ -117,6 +117,23 @@ def follow_up_draft(order, first_name, db, store, order_country):
     return draft
 
 
+def error_draft(order, error_message):
+    draft = {}
+
+    draft['Subject'] = f"[URGENT] ETA Sheet Error for Order {order['Order Number']}" 
+
+    content = f"""<p>Dear Iffah,</p>
+                <p>An error occurred while processing order {order['Order Number']} in ETA Sheet:</p>
+                <p>{error_message}</p>
+                <p>Please investigate the ETA sheet and ensure it has enough empty rows.</p>
+                <p>Kind Regards,</p>"""
+
+    signature = f"""<br>ETA Bot<br>"""
+
+    draft['html'] = ftfy.fix_text(content + signature)
+    return draft
+
+
 def send_email(recipient, draft, db):
     try:
         s = sm.SMTP('smtp.gmail.com', 587)

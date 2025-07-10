@@ -8,7 +8,7 @@ from utils.helpers import format_date
 from services.sheets_service import get_service, update_sheet_with_retry
 from utils.formulas import delete_rows, delete_duplicate_rows
 from utils.eta import get_eta, build_eta_lookup, load_sheet_data
-from utils.email_utils import first_draft, send_email, follow_up_draft
+from utils.email_utils import first_draft, send_email, follow_up_draft, error_draft
 from utils.shopify_graphql import update_note, get_order_data
 
 logger = logging.getLogger(__name__)
@@ -93,43 +93,7 @@ def process_order(data):
             rows_data.append([order_number, title, quantity, sku, vendor, eta, customer_email])
 
         start_row = max(2, get_last_row(SPREADSHEET_ID, SHEET_NAME))
-        number_of_rows_needed = len(rows_data)
-
-        # --- RESIZE SHEET IF NEEDED ---
-        sheet_metadata = service.spreadsheets().get(spreadsheetId=SPREADSHEET_ID).execute()
-        sheet_id = None
-        total_rows = 0
-        for sheet in sheet_metadata.get('sheets', []):
-            if sheet['properties']['title'] == SHEET_NAME:
-                sheet_id = sheet['properties']['sheetId']
-                total_rows = sheet['properties']['gridProperties']['rowCount']
-                break
-
-        if sheet_id:
-            required_row_count = start_row + number_of_rows_needed
-            if required_row_count > total_rows:
-                logger.info(f"Resizing sheet '{SHEET_NAME}' from {total_rows} to {required_row_count} rows")
-                service.spreadsheets().batchUpdate(
-                    spreadsheetId=SPREADSHEET_ID,
-                    body={
-                        "requests": [
-                            {
-                                "updateSheetProperties": {
-                                    "properties": {
-                                        "sheetId": sheet_id,
-                                        "gridProperties": {
-                                            "rowCount": required_row_count
-                                        }
-                                    },
-                                    "fields": "gridProperties.rowCount"
-                                }
-                            }
-                        ]
-                    }
-                ).execute()
-
-            
-        # --- WRITE TO SHEET ---
+        
         range_to_write = f'{SHEET_NAME}!A{start_row}'
         body = {'values': rows_data}
         update_sheet_with_retry(service, SPREADSHEET_ID, range_to_write, body)
@@ -178,9 +142,9 @@ def process_order(data):
                     ).execute()
 
                 if store == "US":
-                    # update_note(order_info, store_configs["UK"])
+                    update_note(order_info, store_configs["UK"])
                     order_info['Order ID'] = 'gid://shopify/Order/' + str(data.get("order_id_us", ""))
-                # update_note(order_info, store_db)
+                update_note(order_info, store_db)
 
                 logger.info(f"Email sent to {customer_email} and spreadsheet updated for {order_number}")
             else:
@@ -191,6 +155,14 @@ def process_order(data):
         return True
     except Exception as e:
         logger.error(f"Error processing order {order_number}: {str(e)}")
+        if "exceeds grid limits" in str(e) or "Invalid range" in str(e):
+            try:
+                draft = error_draft(order_info, str(e))
+                error_email = 'iffah@mlpeformance.co.uk'
+                send_email(error_email, draft, store_db)
+                logger.info(f"Error email sent for order {order_number}")
+            except Exception as email_error:
+                logger.error(f"Failed to send error notification email: {str(email_error)}")
         return False
 
 
