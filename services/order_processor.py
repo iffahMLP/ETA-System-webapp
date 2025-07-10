@@ -157,7 +157,7 @@ def process_order(data):
         logger.error(f"Error processing order {order_number}: {str(e)}")
         if "exceeds grid limits" in str(e) or "Invalid range" in str(e):
             try:
-                draft = error_draft(order_info, str(e))
+                draft = error_draft(str(e))
                 error_email = 'iffah@mlpeformance.co.uk'
                 send_email(error_email, draft, store_db)
                 logger.info(f"Error email sent for order {order_number}")
