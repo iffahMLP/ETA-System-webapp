@@ -158,7 +158,7 @@ def process_order(data):
         if "exceeds grid limits" in str(e) or "Invalid range" in str(e):
             try:
                 draft = error_draft(str(e))
-                error_email = 'iffah@mlpeformance.co.uk'
+                error_email = 'iffah@mlperformance.co.uk'
                 store_configs, _ = get_store_configs()
                 store_db = store_configs.get("UK")
                 send_email(error_email, draft, store_db)
