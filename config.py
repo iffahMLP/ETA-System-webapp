@@ -35,13 +35,15 @@ def get_store_configs():
             "SENDER_PASSWORD": os.getenv(f"{store}_SENDER_PASSWORD", ""),
             "COMPANY": os.getenv(f"{store}_COMPANY", "ML Performance"),
             "PHONE": os.getenv(f"{store}_PHONE", ""),
-            "WEBSITE": os.getenv(f"{store}_WEBSITE", "www.mlperformance.co.uk")
+            "WEBSITE": os.getenv(f"{store}_WEBSITE", "www.mlperformance.co.uk"),
+            "SENDGRID_API_KEY": os.getenv(f"DB_SENDGRID_API_KEY")
         }
 
     # If you have a special "Dumbledore" config as fallback
     dumbledore_config = {
         "SENDER_EMAIL": os.getenv("DB_SENDER_EMAIL", ""),
-        "SENDER_PASSWORD": os.getenv("DB_SENDER_PASSWORD", "")
+        "SENDER_PASSWORD": os.getenv("DB_SENDER_PASSWORD", ""),
+        "SENDGRID_API_KEY": os.getenv(f"DB_SENDGRID_API_KEY")
     }
 
     return store_configs, dumbledore_config

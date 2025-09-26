@@ -4,6 +4,8 @@ from email.mime.text import MIMEText
 from datetime import datetime
 import ftfy
 import logging
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +136,27 @@ def error_draft(error_message):
     return draft
 
 
-def send_email(recipient, draft, db):
+def send_email(recipient, draft, config):
+    """
+    Send an email using SendGrid API (works on Render free tier).
+    """
+    sg = SendGridAPIClient(api_key=config['SENDGRID_API_KEY'])
+
+    message = Mail(
+        from_email=config['SENDER_EMAIL'],          # your Gmail address
+        to_emails=recipient,
+        subject=draft['Subject'],
+        html_content=draft['html']
+    )
+    
+    try:
+        response = sg.send(message)
+        print(f"Email sent! Status code: {response.status_code}")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
+
+def send_email_old(recipient, draft, db):
     try:
         s = sm.SMTP('smtp.gmail.com', 587)
         s.starttls()
