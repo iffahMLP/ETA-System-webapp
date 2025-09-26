@@ -143,7 +143,7 @@ def send_email(recipient, draft, config):
     sg = SendGridAPIClient(api_key=config['SENDGRID_API_KEY'])
 
     print(f"Sending email to {recipient} using SendGrid...")
-    recipient = "iffah@mlperformance.co.uk"
+    # recipient = "iffah@mlperformance.co.uk"
     message = Mail(
         from_email=config['SENDER_EMAIL'],          # your Gmail address
         to_emails=recipient,
